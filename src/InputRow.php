@@ -4,7 +4,7 @@ namespace Ozznest\Testapp;
 
 class InputRow
 {
-    private int $bin;
+    private string $bin;
 
     private float $amount;
 
@@ -17,7 +17,7 @@ class InputRow
         $this->amount = (double)$arr['amount'];
     }
 
-    public function getBin(): int
+    public function getBin(): string
     {
         return $this->bin;
     }
