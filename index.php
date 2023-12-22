@@ -12,34 +12,34 @@ $serializer = JMS\Serializer\SerializerBuilder::create()->build();
 /* @var $deserialized BillingRow */
 //var_dump($deserialized->getCountry()->getAlpha2());
 
-$client = new Client([
-    'base_uri'  => 'https://lookup.binlist.net'
+$clientBilling = new Client([
+    'base_uri'  => 'https://lookup.binlist.net/'
 ]);
 
+$clientExchange = new Client([
+    'base_uri'  => 'https://developers.paysera.com/tasks/api/currency-exchange-rates'
+]);
+//api key: m5xzHIhwCAdqulm4KNs3Pq9ham3LnpOd
 foreach (explode("\n", file_get_contents($argv[1])) as $row) {
     if (empty($row)) break;
     $InputRow = $parser->parse($row);
     try{
-        $response  = $client->get($InputRow->getBin())->getBody();
+        $response  = $clientBilling->get($InputRow->getBin())->getBody();
         $deserialized = $serializer->deserialize($response, BillingRow::class, 'json');
+        echo "\n" . $deserialized->getCountry()->getAlpha2() . "\n";
+        $isEU =  EuroCurrencyDetector::isEuro($deserialized->getCountry()->getAlpha2());
         echo $deserialized->getCountry()->getAlpha2();
     }catch (\GuzzleHttp\Exception\ClientException $e){
         echo $e->getMessage() . "\n";
-
     }
-
 }
 exit();
-
-
-
 echo (string)$response->getBody();
 exit();
 foreach (explode("\n", file_get_contents($argv[1])) as $row) {
 
     if (empty($row)) break;
     $InputRow = $parser->parse($row);
-    $object = $serializer->deserialize($jsonData, \MyNamespace\MyObject::class, 'json');
     $binResults = file_get_contents('https://lookup.binlist.net/' . $InputRow->getBin());
     if (!$binResults)
         die('error!');
@@ -58,42 +58,4 @@ foreach (explode("\n", file_get_contents($argv[1])) as $row) {
 
     echo $amntFixed * ($isEu == 'yes' ? 0.01 : 0.02);
     print "\n";
-}
-
-function isEu($c) {
-    $result = false;
-    switch($c) {
-        case 'AT':
-        case 'BE':
-        case 'BG':
-        case 'CY':
-        case 'CZ':
-        case 'DE':
-        case 'DK':
-        case 'EE':
-        case 'ES':
-        case 'FI':
-        case 'FR':
-        case 'GR':
-        case 'HR':
-        case 'HU':
-        case 'IE':
-        case 'IT':
-        case 'LT':
-        case 'LU':
-        case 'LV':
-        case 'MT':
-        case 'NL':
-        case 'PO':
-        case 'PT':
-        case 'RO':
-        case 'SE':
-        case 'SI':
-        case 'SK':
-            $result = 'yes';
-            return $result;
-        default:
-            $result = 'no';
-    }
-    return $result;
 }
