@@ -37,4 +37,9 @@ class InputRow
         return $this->currency === 'EUR';
     }
 
+    public function getComission(): float
+    {
+        return $this->isEuro() ? 0.01 : 0.02;
+    }
+
 }

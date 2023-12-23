@@ -4,58 +4,45 @@ use Ozznest\Testapp\StringParser;
 use Ozznest\Testapp\EuroCurrencyDetector;
 use Ozznest\Testapp\Dto\BillingRow;
 use GuzzleHttp\Client;
-$parser = new StringParser();
+
 $serializer = JMS\Serializer\SerializerBuilder::create()->build();
+$parser = new StringParser($serializer);
 
-//$billingData = '{"number":{},"scheme":"visa","type":"debit","brand":"Visa Classic","country":{"numeric":"208","alpha2":"DK","name":"Denmark","emoji":"🇩🇰","currency":"DKK","latitude":56,"longitude":10},"bank":{"name":"Jyske Bank A/S"}}';
-
-/* @var $deserialized BillingRow */
-//var_dump($deserialized->getCountry()->getAlpha2());
-
-$clientBilling = new Client([
-    'base_uri'  => 'https://lookup.binlist.net/'
-]);
-
-$clientExchange = new Client([
-    'base_uri'  => 'https://developers.paysera.com/tasks/api/currency-exchange-rates'
-]);
-//api key: m5xzHIhwCAdqulm4KNs3Pq9ham3LnpOd
 foreach (explode("\n", file_get_contents($argv[1])) as $row) {
     if (empty($row)) break;
-    $InputRow = $parser->parse($row);
-    try{
-        $response  = $clientBilling->get($InputRow->getBin())->getBody();
-        $deserialized = $serializer->deserialize($response, BillingRow::class, 'json');
-        echo "\n" . $deserialized->getCountry()->getAlpha2() . "\n";
-        $isEU =  EuroCurrencyDetector::isEuro($deserialized->getCountry()->getAlpha2());
-        echo $deserialized->getCountry()->getAlpha2();
-    }catch (\GuzzleHttp\Exception\ClientException $e){
-        echo $e->getMessage() . "\n";
+    $inputRow  = $parser->parse($row);
+    $alpha = getAlpha($inputRow->getBin());
+    $isEu = EuroCurrencyDetector::isEuro($alpha);
+
+    $rates = getRates();
+    $rate = $rates[$inputRow->getCurrency()];
+
+    if ($inputRow->isEuro() || $rate == 0) {
+        $amntFixed = $inputRow->getAmount();
     }
+    if (!$inputRow->isEuro() || $rate > 0) {
+        $amntFixed = $inputRow->getAmount() / $rate;
+    }
+    echo $amntFixed * ($inputRow->getComission());
+    print "\n";
 }
-exit();
-echo (string)$response->getBody();
-exit();
-foreach (explode("\n", file_get_contents($argv[1])) as $row) {
 
-    if (empty($row)) break;
-    $InputRow = $parser->parse($row);
-    $binResults = file_get_contents('https://lookup.binlist.net/' . $InputRow->getBin());
+function getRates(): array
+{
+    $client = new Client(['base_uri' => 'https://developers.paysera.com/tasks/api/currency-exchange-rates']);
+    $curresncyJson = (string)$client->get('')->getBody();
+    return @json_decode($curresncyJson, true)['rates'];
+}
+
+function getAlpha(int $binId): string
+{
+//    $binResults = file_get_contents('https://lookup.binlist.net/' . $binId);
+//    $client =  new Client(['base_uri' => 'https://lookup.binlist.net/']);
+//    $binResults = (string)$client->get($binId)->getBody();
+    $binResults = '{"number":{},"scheme":"visa","type":"debit","brand":"Visa Classic","country":{"numeric":"440","alpha2":"LT","name":"Lithuania","emoji":"🇱🇹","currency":"EUR","latitude":56,"longitude":24},"bank":{"name":"Uab Finansines Paslaugos Contis"}}';
     if (!$binResults)
         die('error!');
-    $r = json_decode($binResults);
-    $isEu = EuroCurrencyDetector::isEuro($r->country->alpha2);
-
-    $content = @json_decode(file_get_contents('https://api.exchangeratesapi.io/latest'), true);
-    $rate = @json_decode(file_get_contents('https://api.exchangeratesapi.io/latest'), true)['rates'][$InputRow->getCurrency()];
-    if ($InputRow->isEuro() or $rate == 0) {
-        $amntFixed = $InputRow->getAmount();
-
-    }
-    if (!$InputRow->isEuro() or $rate > 0) {
-        $amntFixed = $InputRow->getAmount() / $rate;
-    }
-
-    echo $amntFixed * ($isEu == 'yes' ? 0.01 : 0.02);
-    print "\n";
+    $serializer = JMS\Serializer\SerializerBuilder::create()->build();
+    $r = $serializer->deserialize($binResults,BillingRow::class, 'json');
+    return $r->getCountry()->getAlpha2();
 }

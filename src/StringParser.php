@@ -2,12 +2,17 @@
 
 namespace Ozznest\Testapp;
 
+use JMS\Serializer\Serializer;
+
 class StringParser
 {
+    public function __construct(private Serializer $serializer)
+    {
+
+    }
 
     public function parse(string $json): InputRow
     {
-        $array = \json_decode($json, true);
-        return new InputRow($array);
+       return $this->serializer->deserialize($json, InputRow::class,'json');
     }
 }
