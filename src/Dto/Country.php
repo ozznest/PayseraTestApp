@@ -10,5 +10,4 @@ class Country
     {
         return $this->alpha2;
     }
-
 }

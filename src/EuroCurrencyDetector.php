@@ -34,7 +34,7 @@ class EuroCurrencyDetector
 
     public static function isEuro(string $currency): bool
     {
-        if(in_array($currency, static::$euroCurrencies, true)){
+        if (in_array($currency, static::$euroCurrencies, true)) {
             return true;
         }
         return false;
